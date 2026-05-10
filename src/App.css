@@ -161,6 +161,11 @@
   }
 }
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .ticks {
   position: relative;
   width: 100%;
