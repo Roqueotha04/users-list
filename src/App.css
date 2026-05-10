@@ -187,3 +187,7 @@ table {
     border-right-color: var(--border);
   }
 }
+
+.pointer{
+  cursor:crosshair
+}
