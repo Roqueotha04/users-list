@@ -10,6 +10,10 @@ function App() {
   const [filterCountry, setFilterCountry] = useState<string | null> (null)
   const originalUsers = useRef<User[]>([])
 
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState (1)
+
   const toggleColors = () => {
     setShowColors (!showColors)
   }
@@ -47,7 +51,6 @@ function App() {
      
 
   const sortedUsers = useMemo(()=>{
-
     if (sorting == SortBy.NONE) return filteredUsers
     if(sorting == SortBy.COUNTRY) {
       return [...filteredUsers].sort((a,b)=>{
@@ -66,16 +69,20 @@ function App() {
 
 
   useEffect(()=>{
-    fetch('https://randomuser.me/api?results=100')
+    fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${currentPage}`)
       .then(res => res.json())
       .then(res =>{
-        setUsers(res.results);
+        setUsers(prevState => prevState.concat(res.results));
         originalUsers.current=res.results;
       })
       .catch(err =>{
+        setError(err)
         console.error(err)
       })
-  }, [])
+      .finally(()=>{
+        setLoading(false)
+      })
+  }, [currentPage])
 
   return (
     <>
@@ -93,7 +100,14 @@ function App() {
         <input type="text" onChange={toggleFilterCountry} />
       </header>
       <main>
-        <UserList changeSorting={toggleChangeSorting} deleteUser={toggleDelete} showColors={showColors} users={sortedUsers}></UserList>
+        
+        { users.length > 0 && <UserList changeSorting={toggleChangeSorting} deleteUser={toggleDelete} showColors={showColors} users={sortedUsers}></UserList>}
+        {loading && <p>Cargando...</p>}
+        {!loading && error && <p>Ocurrio un error</p>}
+        {!loading && !error && users.length == 0 && <p>No hay usuarios</p>}
+      
+        
+        {!loading && !error && <button onClick={() => {setLoading(true); setCurrentPage(currentPage + 1)}}>Cargar mas resultados</button>}
       </main>
       
    </>
