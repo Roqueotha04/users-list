@@ -1,17 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SortBy, type User } from './types.d'
 import './App.css'
 import { UserList } from './components/users'
+import { useInfiniteQuery } from '@tanstack/react-query'
+
+  const fetchUsers =  ({pageParam = 1} : {pageParam?: unknown}) =>{
+    return fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${pageParam}`)
+      .then(res => {
+        if(!res.ok) throw new Error ('Error')
+          return res.json()
+       
+      })
+      .then(res => ({
+        users: res.results,
+        nextCursor: res.info.page +1
+      }))
+  }
 
 function App() {
-  const [users, setUsers] = useState<User[]>([])
+
+  const {isLoading, isError, data, refetch, fetchNextPage, hasNextPage } = useInfiniteQuery<{nextCursor: number, users: User[]}>({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    initialPageParam:1,
+    getNextPageParam: (lastPage) => lastPage.nextCursor
+  })
+  
+  const users : User [] = data?.pages?.flatMap(page => page.users) ?? []
+
   const [showColors, setShowColors] = useState (false)
   const [sorting, setSorting] = useState<SortBy> (SortBy.NONE)
   const [filterCountry, setFilterCountry] = useState<string | null> (null)
-  const originalUsers = useRef<User[]>([])
+//  const originalUsers = useRef<User[]>([])
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState (1)
 
   const toggleColors = () => {
@@ -24,15 +45,14 @@ function App() {
   }
 
   const toggleDelete = (email : string) =>{
-    const filteredUsers = users.filter((user) =>{
-      return user.email != email
-    })
-    setUsers(filteredUsers)
+//    const filteredUsers = users.filter((user) =>{
+//      return user.email != email
+//    })
+//    setUsers(filteredUsers)
   }
 
   const toggleReset = () =>{
-    setUsers(originalUsers.current);
-    setSorting(SortBy.NONE)
+    refetch()
   }
 
   const toggleFilterCountry = (event: React.ChangeEvent<HTMLInputElement>) =>{
@@ -67,23 +87,6 @@ function App() {
     return filteredUsers;
   },[filteredUsers, sorting])
 
-
-  useEffect(()=>{
-    fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${currentPage}`)
-      .then(res => res.json())
-      .then(res =>{
-        setUsers(prevState => prevState.concat(res.results));
-        originalUsers.current=res.results;
-      })
-      .catch(err =>{
-        setError(err)
-        console.error(err)
-      })
-      .finally(()=>{
-        setLoading(false)
-      })
-  }, [currentPage])
-
   return (
     <>
       <h1>prueba</h1>
@@ -102,12 +105,12 @@ function App() {
       <main>
         
         { users.length > 0 && <UserList changeSorting={toggleChangeSorting} deleteUser={toggleDelete} showColors={showColors} users={sortedUsers}></UserList>}
-        {loading && <p>Cargando...</p>}
-        {!loading && error && <p>Ocurrio un error</p>}
-        {!loading && !error && users.length == 0 && <p>No hay usuarios</p>}
+        {isLoading && <p>Cargando...</p>}
+        {!isLoading && isError && <p>Ocurrio un error</p>}
+        {!isLoading && !isError && users.length == 0 && <p>No hay usuarios</p>}
       
         
-        {!loading && !error && <button onClick={() => {setLoading(true); setCurrentPage(currentPage + 1)}}>Cargar mas resultados</button>}
+        {!isLoading && !isError && <button onClick={() => fetchNextPage()}>Cargar mas resultados</button>}
       </main>
       
    </>
