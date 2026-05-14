@@ -2,38 +2,18 @@ import { useMemo, useState } from 'react'
 import { SortBy, type User } from './types.d'
 import './App.css'
 import { UserList } from './components/users'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useUsers } from './hooks/useUsers'
 
-  const fetchUsers =  ({pageParam = 1} : {pageParam?: unknown}) =>{
-    return fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${pageParam}`)
-      .then(res => {
-        if(!res.ok) throw new Error ('Error')
-          return res.json()
-       
-      })
-      .then(res => ({
-        users: res.results,
-        nextCursor: res.info.page +1
-      }))
-  }
+ 
 
 function App() {
 
-  const {isLoading, isError, data, refetch, fetchNextPage, hasNextPage } = useInfiniteQuery<{nextCursor: number, users: User[]}>({
-    queryKey: ['users'],
-    queryFn: fetchUsers,
-    initialPageParam:1,
-    getNextPageParam: (lastPage) => lastPage.nextCursor
-  })
-  
-  const users : User [] = data?.pages?.flatMap(page => page.users) ?? []
+  const{isLoading, isError, users, refetch, fetchNextPage, hasNextPage} = useUsers();
 
   const [showColors, setShowColors] = useState (false)
   const [sorting, setSorting] = useState<SortBy> (SortBy.NONE)
   const [filterCountry, setFilterCountry] = useState<string | null> (null)
 //  const originalUsers = useRef<User[]>([])
-
-  const [currentPage, setCurrentPage] = useState (1)
 
   const toggleColors = () => {
     setShowColors (!showColors)
@@ -110,7 +90,7 @@ function App() {
         {!isLoading && !isError && users.length == 0 && <p>No hay usuarios</p>}
       
         
-        {!isLoading && !isError && <button onClick={() => fetchNextPage()}>Cargar mas resultados</button>}
+        {!isLoading && !isError && hasNextPage && <button onClick={() => fetchNextPage()}>Cargar mas resultados</button>}
       </main>
       
    </>
